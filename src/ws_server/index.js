@@ -1,43 +1,44 @@
-import { handlePlayerRegistration } from "./handleWSReq.js";
+import { DB } from "../db/db.js";
+import { handlePlayerRegistration, handleCreateGame, handleRoomUpdate } from "./handleWSReq.js";
 import { WebSocketServer } from "ws";
 
 export const initWS = (server) => {
   const wss = new WebSocketServer({ server });
 
   wss.on("connection", (ws) => {
-    console.log("Client connected");
+    console.log("Client connected", "Look DB", DB);
 
     // Handle errors
     ws.on("error", console.error);
 
     // Handle incoming messages
     ws.on("message", (message) => {
-      const data = JSON.parse(message);
-      data.data = JSON.parse(data.data)
-      console.log("coming message", data);
-      console.log("Command:", data.type);
-      console.log("Result:", data.data);
+      console.log("-----Message--->", message.toString());
+      const data = JSON.parse(message.toString());
+      if (data.data.includes('"')) {
+        data.data = JSON.parse(data.data);
+      }
+      console.log("-----coming message unJSON", data);
 
       // Handle different types of requests
       switch (data.type) {
         case "reg":
-          console.log("registered");
-          // handleRegistration(ws, data);
-          // const output = {
-          //   ...data,
-          //   error: false,
-          //   errorText: "Something went wrong",
-          // };
-          const output = handlePlayerRegistration(data);
-          console.log(output)
-          // console.log(JSON.stringify(output))
-          ws.send(output);
+          const newPlayer = handlePlayerRegistration(ws, data);
+          ws.send(newPlayer);
+          if (DB.rooms.length && ws.id) {
+            const updateRoom = handleRoomUpdate(DB.rooms[0].roomId, ws.id);
+            console.log('updating for a second pl', updateRoom)
+            ws.send(updateRoom);
+          }
           break;
-        case "create_game":
-          // handleCreateGame(ws, data);
+        case "create_room":
+          const newRoom = handleCreateGame(ws.id);
+          ws.send(newRoom);
           break;
         // Add other request handlers as needed
       }
+      // console.log("Command:", data.type);
+      // console.log("Result:", data);
     });
 
     // Handle disconnection
