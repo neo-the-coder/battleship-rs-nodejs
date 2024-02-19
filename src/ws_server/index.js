@@ -1,5 +1,5 @@
 import { DB } from "../db/db.js";
-import { handlePlayerRegistration, handleCreateGame, handleRoomUpdate } from "./handleWSReq.js";
+import { handlePlayerRegistration, handleCreateRoom, handleRoomUpdate, handleWinners, handleUserJoin } from "./handleWSReq.js";
 import { WebSocketServer } from "ws";
 
 export const initWS = (server) => {
@@ -23,18 +23,20 @@ export const initWS = (server) => {
       // Handle different types of requests
       switch (data.type) {
         case "reg":
-          const newPlayer = handlePlayerRegistration(ws, data);
+          const newPlayer = handlePlayerRegistration(ws, data.data.name);
           ws.send(newPlayer);
-          if (DB.rooms.length && ws.id) {
-            const updateRoom = handleRoomUpdate(DB.rooms[0].roomId, ws.id);
-            console.log('updating for a second pl', updateRoom)
-            ws.send(updateRoom);
-          }
+          wss.clients.forEach(client => {
+            client.send(handleRoomUpdate());
+            client.send(handleWinners());
+          })
           break;
         case "create_room":
-          const newRoom = handleCreateGame(ws.id);
+          const newRoom = handleCreateRoom(ws.id);
           ws.send(newRoom);
           break;
+        case "add_user_to_room":
+          handleUserJoin(wss, ws, data.data.indexRoom);  
+        break;
         // Add other request handlers as needed
       }
       // console.log("Command:", data.type);
@@ -47,7 +49,5 @@ export const initWS = (server) => {
       ws.close();
       // Handle cleanup if necessary
     });
-
-    ws.send(JSON.stringify("something"));
   });
 };

@@ -4,7 +4,7 @@ export const createPlayer = (name) => {
   const playerExists = Boolean(
     DB.players.find((player) => player.name === name)
   );
-  const index = Date.now();
+  const index = Number("100" + Math.floor(Math.random() * 10000));
   return {
     name,
     index,
