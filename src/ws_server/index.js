@@ -1,5 +1,12 @@
 import { DB } from "../db/db.js";
-import { handlePlayerRegistration, handleCreateRoom, handleRoomUpdate, handleWinners, handleUserJoin } from "./handleWSReq.js";
+import {
+  handlePlayerRegistration,
+  handleCreateRoom,
+  handleRoomUpdate,
+  handleWinners,
+  handleUserJoin,
+  handleGameStart,
+} from "./handleWSReq.js";
 import { WebSocketServer } from "ws";
 
 export const initWS = (server) => {
@@ -25,19 +32,21 @@ export const initWS = (server) => {
         case "reg":
           const newPlayer = handlePlayerRegistration(ws, data.data.name);
           ws.send(newPlayer);
-          wss.clients.forEach(client => {
+          wss.clients.forEach((client) => {
             client.send(handleRoomUpdate());
             client.send(handleWinners());
-          })
+          });
           break;
         case "create_room":
           const newRoom = handleCreateRoom(ws.id);
           ws.send(newRoom);
           break;
         case "add_user_to_room":
-          handleUserJoin(wss, ws, data.data.indexRoom);  
-        break;
-        // Add other request handlers as needed
+          handleUserJoin(wss, ws, data.data.indexRoom);
+          break;
+        case "add_ships":
+          handleGameStart(wss, data.data);
+          break;
       }
       // console.log("Command:", data.type);
       // console.log("Result:", data);

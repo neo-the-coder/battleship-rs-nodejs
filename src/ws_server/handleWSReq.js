@@ -82,3 +82,47 @@ export const handleUserJoin = (wss, ws, roomId) => {
     });
   }
 };
+
+export const handleGameStart = (wss, {gameId, ships, indexPlayer}) => {
+  if (DB.openGames[gameId]) {
+    if (!DB.openGames[gameId][indexPlayer]) {
+      DB.openGames.gameId.indexPlayer = ships;
+  console.log('***WHATS INSIDE', DB.openGames)
+
+      wss.clients.forEach(client => {
+        client.send(JSON.stringify({
+          type: "start_game",
+          data: JSON.stringify({
+            ships: DB.openGames.gameId[client.id.index].ships,
+            currentPlayerIndex: client.id.index
+          })
+        }))
+      })
+      console.log('GONDEREMLIDID')
+    }
+  } else {
+    DB.openGames[gameId] = {
+      [indexPlayer] : ships
+    }
+  }
+
+  // ws.id.openGames = {
+  //   [gameId]: ships
+  // }
+  // DB.openGames.gameId = 'ready';
+  // if (DB.openGames.gameId) {
+  //   wss.clients.forEach(client => {
+  //     return JSON.stringify({
+  //       type: "start_game",
+  //       data: JSON.stringify({
+  //         ships,
+  //         currentPlayerIndex: indexPlayer
+  //       })
+  //     })
+  //   })
+  // }
+
+  // if (DB.openGames.gameId.length === 2) {
+    
+  // }
+}

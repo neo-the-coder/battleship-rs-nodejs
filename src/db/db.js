@@ -1,4 +1,5 @@
 export const DB = {
   players: [],
-  rooms: []
+  rooms: [],
+  openGames: {}
 };
