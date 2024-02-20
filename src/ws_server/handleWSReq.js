@@ -1,25 +1,8 @@
 import { DB } from "../db/db.js";
 import { createPlayer } from "../models/Player.js";
+import { getIndex } from "../utils/generateIndex.js";
 
-export const handlePlayerRegistration = (ws, name) => {
-  const newPlayer = createPlayer(name);
-
-  if (!newPlayer.error) {
-    const playerInfo = {
-      name: newPlayer.name,
-      index: newPlayer.index,
-    };
-    DB.players.push(playerInfo);
-    ws.id = playerInfo;
-  }
-
-  return JSON.stringify({
-    type: "reg",
-    data: JSON.stringify(newPlayer),
-  });
-};
-
-export const handleRoomUpdate = () => {
+const handleRoomUpdate = () => {
   return JSON.stringify({
     type: "update_room",
     data: JSON.stringify(DB.rooms),
@@ -27,14 +10,14 @@ export const handleRoomUpdate = () => {
   });
 };
 
-export const handleCreateRoom = (playerData) => {
-  const roomId = Number("200" + Math.floor(Math.random() * 10000));
-  // include playerData below to add user to room
+export const handleCreateRoom = (wss) => {
+  const roomId = getIndex("200");
   DB.rooms.push({ roomId, roomUsers: [] });
-  return handleRoomUpdate();
+  const newRoom = handleRoomUpdate();
+  wss.clients.forEach((client) => client.send(newRoom));
 };
 
-export const handleWinners = () => {
+const handleWinners = () => {
   return JSON.stringify({
     type: "update_winners",
     data: JSON.stringify(
@@ -49,80 +32,93 @@ export const handleWinners = () => {
   });
 };
 
-const handleCreateGame = (idPlayer) => {
-  const idGame = Number("300" + Math.floor(Math.random() * 10000));
-  return JSON.stringify({
-    type: "create_game",
-    data: JSON.stringify({
-      idGame,
-      idPlayer,
-    }),
-    id: 0,
+export const handlePlayerRegistration = (wss, ws, name) => {
+  const newPlayer = createPlayer(name);
+
+  // add to the DB if the username is unique
+  if (!newPlayer.error) {
+    const playerInfo = {
+      name: newPlayer.name,
+      index: newPlayer.index,
+    };
+    DB.players.push(playerInfo);
+    ws.id = playerInfo;
+  }
+
+  ws.send(
+    JSON.stringify({
+      type: "reg",
+      data: JSON.stringify(newPlayer),
+    })
+  );
+
+  wss.clients.forEach((client) => {
+    client.send(handleRoomUpdate());
+    client.send(handleWinners());
   });
 };
 
-export const handleUserJoin = (wss, ws, roomId) => {
+const handleCreateGame = (wss) => {
+  const idGame = getIndex("300");
+
+  wss.clients.forEach((client) => {
+    client.send(
+      JSON.stringify({
+        type: "create_game",
+        data: JSON.stringify({
+          idGame,
+          idPlayer: client.id.index,
+        }),
+        id: 0,
+      })
+    );
+  });
+};
+
+export const handleUserJoin = (wss, player, roomId) => {
   const targetRoom = DB.rooms.find((room) => room.roomId === roomId);
 
   if (targetRoom) {
     const alreadyJoined = targetRoom.roomUsers.some(
-      (user) => user.index === ws.id.index
+      (user) => user.index === player.index
     );
 
     if (!alreadyJoined) {
-      targetRoom.roomUsers.push(ws.id);
+      targetRoom.roomUsers.push(player);
     }
   }
-  ws.send(handleRoomUpdate());
-  // Create the game session
+  wss.clients.forEach((client) => client.send(handleRoomUpdate()));
+
   if (targetRoom.roomUsers.length === 2) {
-    const startGame = handleCreateGame(ws.id.index);
-    wss.clients.forEach((client) => {
-      client.send(startGame);
-    });
+    // Remove room from the list of available
+    DB.rooms = DB.rooms.filter((room) => room.roomId !== targetRoom.roomId);
+    // Create the game session
+    handleCreateGame(wss);
   }
 };
 
-export const handleGameStart = (wss, {gameId, ships, indexPlayer}) => {
+export const handleGameStart = (wss, { gameId, ships, indexPlayer }) => {
+  // When some player already added ships
   if (DB.openGames[gameId]) {
+    // while second player haven't added ships
     if (!DB.openGames[gameId][indexPlayer]) {
-      DB.openGames.gameId.indexPlayer = ships;
-  console.log('***WHATS INSIDE', DB.openGames)
-
-      wss.clients.forEach(client => {
-        client.send(JSON.stringify({
-          type: "start_game",
-          data: JSON.stringify({
-            ships: DB.openGames.gameId[client.id.index].ships,
-            currentPlayerIndex: client.id.index
+      DB.openGames[gameId][indexPlayer] = ships;
+      wss.clients.forEach((client) => {
+        client.send(
+          JSON.stringify({
+            type: "start_game",
+            data: JSON.stringify({
+              ships: DB.openGames[gameId][client.id.index],
+              currentPlayerIndex: client.id.index,
+            }),
           })
-        }))
-      })
-      console.log('GONDEREMLIDID')
+        );
+      });
     }
+    // When no player added ships
   } else {
     DB.openGames[gameId] = {
-      [indexPlayer] : ships
-    }
+      [indexPlayer]: ships,
+    };
   }
-
-  // ws.id.openGames = {
-  //   [gameId]: ships
-  // }
-  // DB.openGames.gameId = 'ready';
-  // if (DB.openGames.gameId) {
-  //   wss.clients.forEach(client => {
-  //     return JSON.stringify({
-  //       type: "start_game",
-  //       data: JSON.stringify({
-  //         ships,
-  //         currentPlayerIndex: indexPlayer
-  //       })
-  //     })
-  //   })
-  // }
-
-  // if (DB.openGames.gameId.length === 2) {
-    
-  // }
-}
+};

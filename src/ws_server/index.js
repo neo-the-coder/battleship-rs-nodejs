@@ -2,8 +2,6 @@ import { DB } from "../db/db.js";
 import {
   handlePlayerRegistration,
   handleCreateRoom,
-  handleRoomUpdate,
-  handleWinners,
   handleUserJoin,
   handleGameStart,
 } from "./handleWSReq.js";
@@ -30,22 +28,19 @@ export const initWS = (server) => {
       // Handle different types of requests
       switch (data.type) {
         case "reg":
-          const newPlayer = handlePlayerRegistration(ws, data.data.name);
-          ws.send(newPlayer);
-          wss.clients.forEach((client) => {
-            client.send(handleRoomUpdate());
-            client.send(handleWinners());
-          });
+          handlePlayerRegistration(wss, ws, data.data.name);
           break;
         case "create_room":
-          const newRoom = handleCreateRoom(ws.id);
-          ws.send(newRoom);
+          handleCreateRoom(wss);
           break;
         case "add_user_to_room":
-          handleUserJoin(wss, ws, data.data.indexRoom);
+          handleUserJoin(wss, ws.id, data.data.indexRoom);
           break;
         case "add_ships":
           handleGameStart(wss, data.data);
+          break;
+        case "attack":
+          // TODO: Implement attack handler
           break;
       }
       // console.log("Command:", data.type);

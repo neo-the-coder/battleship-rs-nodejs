@@ -1,10 +1,11 @@
 import { DB } from "../db/db.js";
+import { getIndex } from "../utils/generateIndex.js";
 
 export const createPlayer = (name) => {
   const playerExists = Boolean(
     DB.players.find((player) => player.name === name)
   );
-  const index = Number("100" + Math.floor(Math.random() * 10000));
+  const index = getIndex("100");
   return {
     name,
     index,
