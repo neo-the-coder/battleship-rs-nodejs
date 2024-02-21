@@ -97,12 +97,27 @@ export const handleUserJoin = (wss, player, roomId) => {
   }
 };
 
+const handleTurn = (currentPlayer) => {
+  return JSON.stringify({
+    type: "turn",
+    data: JSON.stringify({
+      currentPlayer,
+    }),
+    id: 0,
+  });
+};
+
 export const handleGameStart = (wss, { gameId, ships, indexPlayer }) => {
   // When some player already added ships
   if (DB.openGames[gameId]) {
     // while second player haven't added ships
     if (!DB.openGames[gameId][indexPlayer]) {
       DB.openGames[gameId][indexPlayer] = ships;
+      // Determine first player randomly
+      const currentPlayer = +Object.keys(DB.openGames[gameId])[
+        Math.floor(Math.random() * 2)
+      ];
+
       wss.clients.forEach((client) => {
         client.send(
           JSON.stringify({
@@ -113,6 +128,8 @@ export const handleGameStart = (wss, { gameId, ships, indexPlayer }) => {
             }),
           })
         );
+        // Start with randomly selected player
+        client.send(handleTurn(currentPlayer));
       });
     }
     // When no player added ships
@@ -122,3 +139,7 @@ export const handleGameStart = (wss, { gameId, ships, indexPlayer }) => {
     };
   }
 };
+
+const handleAttack = (wss, { gameId, x, y, indexPlayer }) => {};
+
+const didHit = (x, y) => {};
