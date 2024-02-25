@@ -1,6 +1,7 @@
 import { DB } from "../db/db.js";
 import { createPlayer } from "../models/Player.js";
 import { getIndex } from "../utils/generateIndex.js";
+import { getPriorityCells } from "../utils/getPriorityCells.js";
 
 const handleRoomUpdate = () => {
   return JSON.stringify({
@@ -158,28 +159,6 @@ const handleGameFinish = (winPlayer) => {
   });
 };
 
-const getProbableCells = (highProb, shots, x, y) => {
-  // did not hit with random before
-  if (!highProb) {
-    highProb = {
-      cells: [],
-      firstRandomHit: `${x}${y}`
-    }
-    for (let newX of [x-1, x+1]) {
-      const coord = `${newX}${y}`;
-      if (!shots.has(coord) && newX >= 0 && newX < 10) highProb.cells.push(coord);
-    }
-    for (let newY of [y-1, y+1]) {
-      const coord = `${x}${newY}`;
-      if (!shots.has(coord) && newY >= 0 && newY < 10) highProb.cells.push(coord);
-    }
-  } else {
-
-  }
-  
-
-}
-
 const handleCellsAround = (wss, indexPlayer, shots, direction, x, y, shipLength) => {
   const [shortLoop, longLoop] = direction ? [x, y] : [y, x];
   for (let i = -1 + shortLoop; i <= 1 + shortLoop; i++) {
@@ -214,7 +193,7 @@ const handleCellsAround = (wss, indexPlayer, shots, direction, x, y, shipLength)
   }
 };
 
-export const handleAttack = (wss, { gameId, x, y, indexPlayer }, isRandomShot = false) => {
+export const handleAttack = (wss, { gameId, x, y, indexPlayer }) => {
   const indexEnemy = +Object.keys(DB.openGames[gameId].players).find((player) => +player !== indexPlayer);
   const ships = DB.openGames[gameId].players[indexEnemy].ships;
   const shots = DB.openGames[gameId].players[indexPlayer].shots;
@@ -236,7 +215,7 @@ export const handleAttack = (wss, { gameId, x, y, indexPlayer }, isRandomShot = 
       
       if (isHit) {
         // one block left to destroy
-        if (ship.hit === ship.length - 1 || ship.length === 1) {
+        if (ship.length === 1 || ship.hits?.length === ship.length - 1 ) {
           status = "killed";
           // send killed for each block + missed around
           handleCellsAround(wss, indexPlayer, shots, ship.direction, ship.position.x, ship.position.y, ship.length)
@@ -244,12 +223,20 @@ export const handleAttack = (wss, { gameId, x, y, indexPlayer }, isRandomShot = 
           ships.splice(ships.indexOf(ship), 1);
         } else {
           status = "shot";
-          ship.hit = (ship.hit ?? 0) + 1;
-          if (isRandomShot) {
-
-          }
+          // create empty hits array if not exists
+          ship.hits ??= [];
+          // add hit to the array and sort it
+          ship.hits.push(coordinates)
+          ship.hits.sort();
+          shots.add(coordinates);
+          // calculate priority cells
+          getPriorityCells(ship, shots, coordinates);
         }
         break;
+      }
+      // ship missed
+      if (ship?.priorityCells?.includes(coordinates)) {
+        ship.priorityCells = ship.priorityCells.filter(coord => coord !== coordinates);
       }
     }
 
@@ -302,15 +289,37 @@ export const handleAttack = (wss, { gameId, x, y, indexPlayer }, isRandomShot = 
 
 export const handleRandomAttack = (wss, { gameId, indexPlayer }) => {
   if (indexPlayer === DB.openGames[gameId].currentPlayer) {
-    const playedMoves = Array.from(
-      DB.openGames[gameId].players[indexPlayer].shots
+    // see if there are any priority cells to check first
+    const indexEnemy = +Object.keys(DB.openGames[gameId].players).find(
+      (player) => +player !== indexPlayer
     );
-    const playableMoves = DB.possibleMoves.filter(
-      (move) => !playedMoves.includes(move)
-    );
-    const [x, y] =
-      playableMoves[Math.floor(Math.random() * playableMoves.length)];
+    const priorityMoves = DB.openGames[gameId].players[
+      indexEnemy
+    ].ships.flatMap((ship) => ship.priorityCells ?? []);
+
+    let x, y;
+    if (priorityMoves.length > 0) {
+      const priorityRandomMove =
+        priorityMoves[Math.floor(Math.random() * priorityMoves.length)];
+      
+        console.log('random from priproty:', priorityRandomMove)
+      x = Number(priorityRandomMove[0]);
+      y = Number(priorityRandomMove[1]);
+    } else {
+      // Randomly attack enemy
+      const playedMoves = Array.from(
+        DB.openGames[gameId].players[indexPlayer].shots
+      );
+      const playableMoves = DB.possibleMoves.filter(
+        (move) => !playedMoves.includes(move)
+      );
+      const playableMove =
+        playableMoves[Math.floor(Math.random() * playableMoves.length)];
+      x = Number(playableMove[0]);
+      y = Number(playableMove[1]);
+    }
+
     console.log("Got randomly: ", x, y);
-    handleAttack(wss, { gameId, x: +x, y: +y, indexPlayer }, true);
+    handleAttack(wss, { gameId, x, y, indexPlayer });
   }
 };
