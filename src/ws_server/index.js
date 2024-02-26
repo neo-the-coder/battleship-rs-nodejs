@@ -6,62 +6,73 @@ import {
   handleGameStart,
   handleAttack,
   handleRandomAttack,
-  // handleSinglePlay,
+  handleSinglePlay,
+  handleBot,
 } from "./handleWSReq.js";
 import { WebSocketServer } from "ws";
+
+let isBotClient = false;
 
 export const initWS = (server) => {
   const wss = new WebSocketServer({ server });
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (client) => {
     console.log("Client connected to the Web Socket Server");
 
+    // handle bot client
+    if (isBotClient) {
+      handleBot(client)
+      isBotClient = false;
+    }
+
     // Handle errors
-    ws.on("error", console.error);
+    client.on("error", console.error);
 
     // Handle incoming messages
-    ws.on("message", (message) => {
-      console.log("-----Message--->", message.toString());
-      const data = JSON.parse(message.toString());
-      if (data.data.includes('"')) {
-        data.data = JSON.parse(data.data);
+    client.on("message", (messageJSON) => {
+      // parse message
+      // console.log("-----Message--->", messageJSON.toString());
+      const msg = JSON.parse(messageJSON.toString());
+      if (msg.data.includes('"')) {
+        msg.data = JSON.parse(msg.data);
       }
+      const {type, data} = msg;
 
       // Handle different types of requests
-      switch (data.type) {
+      console.log("Command:", type);
+      switch (type) {
         case "reg":
-          handlePlayerRegistration(wss, ws, data.data);
+          handlePlayerRegistration(wss, client, data);
           break;
         case "create_room":
-          handleCreateRoom(wss, ws.id);
+          handleCreateRoom(wss, client.id);
           break;
         case "add_user_to_room":
-          handleUserJoin(wss, ws.id, data.data.indexRoom);
+          handleUserJoin(wss, client.id, data.indexRoom);
           break;
         case "add_ships":
-          handleGameStart(wss, data.data);
+          handleGameStart(wss, data);
           break;
         case "attack":
-          const {gameId, indexPlayer} = data.data;
+          const {gameId, indexPlayer} = data;
           if (indexPlayer === DB.openGames[gameId].currentPlayer) {
-            handleAttack(wss, data.data);
+            handleAttack(wss, data);
           }
           break;
         case "randomAttack":
-          handleRandomAttack(wss, data.data);
+          handleRandomAttack(wss, data);
           break;
         case "single_play":
-          handleSinglePlay(wss, ws.id);
+          isBotClient = true;
+          handleSinglePlay(wss, client.id);
           break;
       }
-      // console.log("Command:", data.type);
-      // console.log("Result:", data);
     });
 
     // Handle disconnection
-    ws.on("close", () => {
+    client.on("close", () => {
       console.log("Client disconnected");
-      ws.close();
+      client.close();
     });
   });
 };
