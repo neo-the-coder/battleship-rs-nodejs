@@ -30,7 +30,7 @@ export const initWS = (server) => {
       // Handle different types of requests
       switch (data.type) {
         case "reg":
-          handlePlayerRegistration(wss, ws, data.data.name);
+          handlePlayerRegistration(wss, ws, data.data);
           break;
         case "create_room":
           handleCreateRoom(wss, ws.id);

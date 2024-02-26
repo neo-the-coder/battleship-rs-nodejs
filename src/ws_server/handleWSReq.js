@@ -34,14 +34,16 @@ const handleWinners = () => {
   });
 };
 
-export const handlePlayerRegistration = (wss, ws, name) => {
-  const newPlayer = createPlayer(name);
+export const handlePlayerRegistration = (wss, ws, credentials) => {
+  const newPlayer = createPlayer(credentials);
 
   // add to the DB if the username is unique
   if (!newPlayer.error) {
     const playerInfo = {
       name: newPlayer.name,
+      password: credentials.password,
       index: newPlayer.index,
+      client: ws
     };
     DB.players.push(playerInfo);
     ws.id = playerInfo;
@@ -63,17 +65,21 @@ export const handlePlayerRegistration = (wss, ws, name) => {
 const handleCreateGame = (wss) => {
   const idGame = getIndex("300");
 
-  wss.clients.forEach((client) => {
-    client.send(
-      JSON.stringify({
-        type: "create_game",
-        data: JSON.stringify({
-          idGame,
-          idPlayer: client.id.index,
-        }),
-        id: 0,
-      })
-    );
+  wss.clients.forEach((client, i) => {
+    console.log('sent only to some', client.id)
+    if (i % 2 === 0) {
+
+      client.send(
+        JSON.stringify({
+          type: "create_game",
+          data: JSON.stringify({
+            idGame,
+            idPlayer: client.id.index,
+          }),
+          id: 0,
+        })
+      );
+    }
   });
   return idGame;
 };
