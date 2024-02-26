@@ -1,6 +1,8 @@
+import { WebSocket } from "ws";
 import { DB } from "../db/db.js";
 import { createPlayer } from "../models/Player.js";
 import { getIndex } from "../utils/generateIndex.js";
+import { getBotShips } from "../utils/getBotShips.js";
 import { getPriorityCells } from "../utils/getPriorityCells.js";
 
 const handleRoomUpdate = () => {
@@ -73,6 +75,7 @@ const handleCreateGame = (wss) => {
       })
     );
   });
+  return idGame;
 };
 
 export const handleUserJoin = (wss, player, roomId) => {
@@ -135,6 +138,23 @@ export const handleGameStart = (wss, { gameId, ships, indexPlayer }) => {
         // Start with randomly selected player
         client.send(handleTurn(currentPlayer));
       });
+    } else {
+      // for single play case
+      // DB.openGames[gameId].players[indexPlayer].ships = ships;
+      // console.log("IM IN SINGLE PLAY")
+      // wss.clients.forEach((client) => {
+      //   if (client.id.index === indexPlayer) {
+      //     client.send(
+      //       JSON.stringify({
+      //         type: "start_game",
+      //         data: JSON.stringify({
+      //           ships: DB.openGames[gameId].players[client.id.index].ships,
+      //           currentPlayerIndex: client.id.index,
+      //         }),
+      //       })
+      //     )
+      //   }
+      // });
     }
     // When no player added ships
   } else {
@@ -195,12 +215,14 @@ const handleCellsAround = (wss, indexPlayer, shots, direction, x, y, shipLength)
 
 export const handleAttack = (wss, { gameId, x, y, indexPlayer }) => {
   const indexEnemy = +Object.keys(DB.openGames[gameId].players).find((player) => +player !== indexPlayer);
+  console.log("WHO's THE ENEMY AND PLAYERS?", indexEnemy, DB.openGames[gameId].players)
   const ships = DB.openGames[gameId].players[indexEnemy].ships;
   const shots = DB.openGames[gameId].players[indexPlayer].shots;
   const coordinates = `${x}${y}`;
 
-  // if coordinate was not hit before
-  if (!shots.has(coordinates)) {
+  // if coordinate was not hit before OR 
+  // because of a bug in the front x or y is -1 don't proceed
+  if (!shots.has(coordinates) && x !== -1 && y !== -1) {
     let status = "miss";
 
     for (const ship of ships) {
@@ -235,7 +257,7 @@ export const handleAttack = (wss, { gameId, x, y, indexPlayer }) => {
         break;
       }
       // ship missed
-      if (ship?.priorityCells?.includes(coordinates)) {
+      if (ship.priorityCells?.includes(coordinates)) {
         ship.priorityCells = ship.priorityCells.filter(coord => coord !== coordinates);
       }
     }
@@ -323,3 +345,48 @@ export const handleRandomAttack = (wss, { gameId, indexPlayer }) => {
     handleAttack(wss, { gameId, x, y, indexPlayer });
   }
 };
+
+// export const handleSinglePlay = (wss, player) => {
+// // Create a new Web Socket Bot client
+// const botSocket = new WebSocket('ws://localhost:3000/');
+
+// if (CLIENTS.length === 0) {
+//   ws.id = {
+//     name: "SmartBot",
+//     index: 7777777
+//   }
+// }
+
+// botSocket.on('message', (message) => {
+//   const data = JSON.parse(message.toString())
+//   if (data.data.includes('"')) {
+//     data.data = JSON.parse(data.data);
+//   }
+  
+//   console.log('BOT RECEIVED A MESSAGE', data.type)
+//   if (data.type === "create_game") {
+
+//   }
+
+//   if (data.type === "turn") {
+//     handleRandomAttack = (wss, { gameId, 7777777 })
+//   }
+
+// })
+
+
+//   const gameId = handleCreateGame(wss);
+
+//   DB.openGames[gameId] = {
+//     players: {
+//       [player.index]: {
+//         shots: new Set(),
+//       },
+//       "7777777": {
+//         ships: getBotShips(),
+//         shots: new Set(),
+//       }
+//     },
+//     currentPlayer: player.index,
+//   };
+// }

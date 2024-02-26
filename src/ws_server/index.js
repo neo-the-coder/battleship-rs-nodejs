@@ -6,6 +6,7 @@ import {
   handleGameStart,
   handleAttack,
   handleRandomAttack,
+  // handleSinglePlay,
 } from "./handleWSReq.js";
 import { WebSocketServer } from "ws";
 
@@ -13,7 +14,7 @@ export const initWS = (server) => {
   const wss = new WebSocketServer({ server });
 
   wss.on("connection", (ws) => {
-    console.log("Client connected", "Look DB", DB);
+    console.log("Client connected to the Web Socket Server");
 
     // Handle errors
     ws.on("error", console.error);
@@ -25,7 +26,6 @@ export const initWS = (server) => {
       if (data.data.includes('"')) {
         data.data = JSON.parse(data.data);
       }
-      // console.log("-----coming message unJSON", data);
 
       // Handle different types of requests
       switch (data.type) {
@@ -50,21 +50,9 @@ export const initWS = (server) => {
         case "randomAttack":
           handleRandomAttack(wss, data.data);
           break;
-          //   wss.clients.forEach(client => 
-        //   client.send(JSON.stringify({
-        //     type: "attack",
-        //     data: JSON.stringify(
-        //         {
-        //             position: 
-        //             {
-        //                 x: 0,
-        //                 y: 0,
-        //             },
-        //             currentPlayer: ws.id.index,
-        //             status: ["miss","killed","shot"][Math.floor(Math.random() *3)]
-        //         }),
-        //     id: 0,
-        // })))
+        case "single_play":
+          handleSinglePlay(wss, ws.id);
+          break;
       }
       // console.log("Command:", data.type);
       // console.log("Result:", data);
@@ -74,7 +62,6 @@ export const initWS = (server) => {
     ws.on("close", () => {
       console.log("Client disconnected");
       ws.close();
-      // Handle cleanup if necessary
     });
   });
 };
