@@ -1,33 +1,34 @@
 # battleship-rs-nodejs
 1.  [Link to the task](https://github.com/AlreadyBored/nodejs-assignments/blob/main/assignments/battleship/assignment.md)
 2.  Deadline date: 27 February 2024 02:00 UTC
-3.  Self check score:
+3.  Self check score: 158/188
+4.  Additional smart RandomAttack logic (not required by task) 
 
 ## Scoring
 Basic Scope
 -----------------------------------------------------------------------------------------------------------------------
 
 -   Websocket
-    -   +6 Implemented workable websocket server
-    -   +6 Handle websocket clients connection/disconnection properly
-    -   +10 Websocket server message handler implemented properly
-    -   +10 Websocket server message sender implemented properly
+    - [x]  +6 Implemented workable websocket server
+    - [x]  +6 Handle websocket clients connection/disconnection properly
+    - [x]  +10 Websocket server message handler implemented properly
+    - [x]  +10 Websocket server message sender implemented properly
 -   User
-    -   +5 Create user with password in temprorary database
-    -   +5 User validation
+    - [x]  +5 Create user with password in temprorary database
+    - [x]  +5 User validation
 -   Room
-    -   +6 Create game room
-    -   +6 Add user to game room
-    -   +6 Start game
-    -   +6 Finish game
-    -   +8 Update room's game state
-    -   +4 Update player's turn
-    -   +8 Update players winner table
+    - [x]  +6 Create game room
+    - [x]  +6 Add user to game room
+    - [x]  +6 Start game
+    - [x]  +6 Finish game
+    - [x]  +8 Update room's game state
+    - [x]  +4 Update player's turn
+    - [x]  +8 Update players winner table
 -   Ships
-    -   +10 Locate ship to the game board
+    - [x]  +10 Locate ship to the game board
 -   Game
-    -   +8 Attack
-    -   +4 Random attack
+    - [x]  +8 Attack
+    - [x]  +4 Random attack
 
 Advanced Scope
 -----------------------------------------------------------------------------------------------------------------------------
